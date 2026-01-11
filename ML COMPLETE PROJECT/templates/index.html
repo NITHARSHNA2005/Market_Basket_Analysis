@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Basket Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .plot-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .rule-item {
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .metric-badge {
+            display: inline-block;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .support { background-color: #e3f2fd; color: #1976d2; }
+        .confidence { background-color: #e8f5e8; color: #388e3c; }
+        .lift { background-color: #fff3e0; color: #f57c00; }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-shopping-basket me-2"></i>
+                Market Basket Analysis
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h2><i class="fas fa-chart-line me-2"></i>BigBasket Market Basket Analysis</h2>
+                        <p class="mb-0">Discover product associations using Apriori and FP-Growth algorithms</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cogs me-2"></i>Control Panel</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <button id="loadDataBtn" class="btn btn-success w-100">
+                                    <i class="fas fa-database me-2"></i>Load Data
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <select id="algorithmSelect" class="form-select">
+                                    <option value="apriori">Apriori Algorithm</option>
+                                    <option value="fpgrowth">FP-Growth Algorithm</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select id="plotSelect" class="form-select">
+                                    <option value="support_confidence">Support vs Confidence</option>
+                                    <option value="top_itemsets">Top Frequent Itemsets</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="row mb-4" id="statsSection" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Algorithm Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="statsContent">
+                            <!-- Statistics will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-area me-2"></i>Visualization</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="loading" id="plotLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Generating plot...</p>
+                        </div>
+                        <div class="plot-container" id="plotContainer">
+                            <p class="text-muted">Load data first to see visualizations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Association Rules Section -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list me-2"></i>Association Rules</h5>
+                    </div>
+                    <div class="card-body" style="height: 500px; overflow-y: auto;">
+                        <div id="rulesContainer">
+                            <p class="text-muted">Load data first to see association rules</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5><i class="fas fa-lightbulb me-2"></i>Product Recommendations</h5>
+                    </div>
+                    <div class="card-body" style="height: 500px; display: flex; flex-direction: column;">
+                        <div class="mb-3">
+                            <input type="text" id="productInput" class="form-control" 
+                                   placeholder="Enter a product name (e.g., Snacks & Branded Foods)">
+                            <button id="getRecommendationsBtn" class="btn btn-primary mt-2 w-100">
+                                Get Recommendations
+                            </button>
+                        </div>
+                        <div id="recommendationsContainer" style="flex: 1; overflow-y: auto;">
+                            <p class="text-muted">Enter a product name to get recommendations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="alertContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let dataLoaded = false;
+
+        // Show alert message
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alert);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Load data
+        document.getElementById('loadDataBtn').addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+            
+            fetch('/load_data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        dataLoaded = true;
+                        showAlert(`Data loaded successfully! Found ${data.apriori_rules} Apriori rules and ${data.fpgrowth_rules} FP-Growth rules.`, 'success');
+                        loadStats();
+                        loadRules();
+                        // Add small delay to ensure data is fully loaded
+                        setTimeout(() => {
+                            loadPlot();
+                        }, 500);
+                    } else {
+                        showAlert('Error loading data: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-database me-2"></i>Load Data';
+                });
+        });
+
+        // Load statistics
+        function loadStats() {
+            fetch('/get_stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const statsContent = document.getElementById('statsContent');
+                        const aprioriStats = data.stats.apriori;
+                        const fpgrowthStats = data.stats.fpgrowth;
+                        
+                        statsContent.innerHTML = `
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-search me-2"></i>Apriori Algorithm</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge support w-100">Total Rules<br><strong>${aprioriStats.total_rules}</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge confidence w-100">Accuracy<br><strong>${aprioriStats.accuracy}%</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge lift w-100">High Lift Rules<br><strong>${aprioriStats.high_lift_rules}</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge support w-100">Max Confidence<br><strong>${aprioriStats.max_confidence}</strong></div>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Avg: Support ${aprioriStats.avg_support}, Confidence ${aprioriStats.avg_confidence}, Lift ${aprioriStats.avg_lift}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0"><i class="fas fa-tree me-2"></i>FP-Growth Algorithm <span class="badge bg-warning text-dark ms-2">Better Performance</span></h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge support w-100">Total Rules<br><strong>${fpgrowthStats.total_rules}</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge confidence w-100">Accuracy<br><strong>${fpgrowthStats.accuracy}%</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge lift w-100">High Lift Rules<br><strong>${fpgrowthStats.high_lift_rules}</strong></div>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <div class="metric-badge support w-100">Max Confidence<br><strong>${fpgrowthStats.max_confidence}</strong></div>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Avg: Support ${fpgrowthStats.avg_support}, Confidence ${fpgrowthStats.avg_confidence}, Lift ${fpgrowthStats.avg_lift}</small>
+                                        ${fpgrowthStats.accuracy > aprioriStats.accuracy ? 
+                                            '<div class="alert alert-success mt-2 mb-0"><small><i class="fas fa-trophy me-1"></i>FP-Growth shows ' + (fpgrowthStats.accuracy - aprioriStats.accuracy).toFixed(1) + '% higher accuracy</small></div>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('statsSection').style.display = 'block';
+                    }
+                });
+        }
+
+        // Load association rules
+        function loadRules() {
+            const algorithm = document.getElementById('algorithmSelect').value;
+            
+            fetch(`/get_rules/${algorithm}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const rulesContainer = document.getElementById('rulesContainer');
+                        rulesContainer.innerHTML = '';
+                        
+                        data.rules.forEach(rule => {
+                            const ruleDiv = document.createElement('div');
+                            ruleDiv.className = 'rule-item';
+                            ruleDiv.innerHTML = `
+                                <div><strong>${rule.antecedents.join(', ')} → ${rule.consequents.join(', ')}</strong></div>
+                                <div class="mt-2">
+                                    <span class="metric-badge support">Support: ${rule.support}</span>
+                                    <span class="metric-badge confidence">Confidence: ${rule.confidence}</span>
+                                    <span class="metric-badge lift">Lift: ${rule.lift}</span>
+                                </div>
+                            `;
+                            rulesContainer.appendChild(ruleDiv);
+                        });
+                    }
+                });
+        }
+
+        // Load plot
+        function loadPlot() {
+            const algorithm = document.getElementById('algorithmSelect').value;
+            const plotType = document.getElementById('plotSelect').value;
+            
+            document.getElementById('plotLoading').style.display = 'block';
+            document.getElementById('plotContainer').innerHTML = '';
+            
+            fetch(`/get_plot/${plotType}/${algorithm}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('plotContainer').innerHTML = 
+                            `<img src="data:image/png;base64,${data.plot}" alt="Plot">`;
+                    } else {
+                        document.getElementById('plotContainer').innerHTML = 
+                            `<p class="text-danger">Error loading plot: ${data.message}</p>`;
+                    }
+                })
+                .finally(() => {
+                    document.getElementById('plotLoading').style.display = 'none';
+                });
+        }
+
+        // Get recommendations
+        document.getElementById('getRecommendationsBtn').addEventListener('click', function() {
+            const product = document.getElementById('productInput').value.trim();
+            const algorithm = document.getElementById('algorithmSelect').value;
+            
+            if (!product) {
+                showAlert('Please enter a product name', 'warning');
+                return;
+            }
+            
+            if (!dataLoaded) {
+                showAlert('Please load data first', 'warning');
+                return;
+            }
+            
+            fetch(`/get_recommendations?product=${encodeURIComponent(product)}&algorithm=${algorithm}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('recommendationsContainer');
+                    
+                    if (data.status === 'success' && data.recommendations.length > 0) {
+                        container.innerHTML = '<h6>Recommended Products:</h6>';
+                        data.recommendations.forEach(rec => {
+                            const recDiv = document.createElement('div');
+                            recDiv.className = 'rule-item';
+                            recDiv.innerHTML = `
+                                <div><strong>${rec.product}</strong></div>
+                                <div class="mt-2">
+                                    <span class="metric-badge confidence">Confidence: ${rec.confidence}</span>
+                                    <span class="metric-badge lift">Lift: ${rec.lift}</span>
+                                </div>
+                            `;
+                            container.appendChild(recDiv);
+                        });
+                    } else {
+                        container.innerHTML = '<p class="text-muted">No recommendations found for this product.</p>';
+                    }
+                });
+        });
+
+        // Event listeners for algorithm and plot changes
+        document.getElementById('algorithmSelect').addEventListener('change', function() {
+            if (dataLoaded) {
+                loadRules();
+                loadPlot();
+            }
+        });
+
+        document.getElementById('plotSelect').addEventListener('change', function() {
+            if (dataLoaded) {
+                loadPlot();
+            }
+        });
+    </script>
+</body>
+</html>
