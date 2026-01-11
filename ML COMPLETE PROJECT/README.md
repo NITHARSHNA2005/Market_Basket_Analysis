@@ -48,29 +48,4 @@ ML COMPLETE PROJECT/
 └── BigBasket Data.csv   # Dataset (update path as needed)
 
 
-## API Endpoints
 
-- `GET /` - Main web interface
-- `GET /load_data` - Load and process the dataset
-- `GET /get_rules/<algorithm>` - Get association rules for specified algorithm
-- `GET /get_plot/<plot_type>/<algorithm>` - Generate visualization plots
-- `GET /get_recommendations` - Get product recommendations
-- `GET /get_stats` - Get algorithm statistics
-
-## Dataset Requirements
-
-The application expects a CSV file with the following columns:
-- `Invoice No.` - Transaction identifier
-- `Category` - Product category
-
-## Troubleshooting
-
-1. **File Path Error**: Update the CSV file path in `app.py` line 18
-2. **Port Already in Use**: Change the port in `app.py` line 174
-3. **Missing Dependencies**: Run `pip install -r requirements.txt`
-
-## Notes
-
-- The application uses a minimum support threshold of 0.01 for both algorithms
-- Only rules with lift > 1 are considered significant
-- The web interface is optimized for desktop browsers
